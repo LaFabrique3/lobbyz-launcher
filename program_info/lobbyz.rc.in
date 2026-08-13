@@ -18,6 +18,7 @@ BEGIN
                         VALUE "CompanyName", "@Launcher_Authors@"
                         VALUE "FileDescription", "@Launcher_DisplayName@"
                         VALUE "FileVersion", "@Launcher_VERSION_NAME4@"
+                        VALUE "LegalCopyright", "@Launcher_CopyrightShort@"
                         VALUE "ProductName", "@Launcher_DisplayName@"
                         VALUE "ProductVersion", "@Launcher_VERSION_NAME4@"
                 END

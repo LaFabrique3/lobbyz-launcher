@@ -24,6 +24,14 @@ set(Launcher_SVGFileName "${Launcher_AppID}.svg")
 set(Launcher_Copyright "NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.\\nVous (pas Mojang) etes responsable de ce que vous hebergez.\\n(c) 2026 Lobbyz - fork de Prism Launcher (GPL-3.0)\\n© 2022-2026 Prism Launcher Contributors\\n© 2021-2022 PolyMC Contributors\\n© 2012-2021 MultiMC Contributors")
 set(Launcher_Copyright_Mac "© 2022-2026 Prism Launcher Contributors, © 2021-2022 PolyMC Contributors and © 2012-2021 MultiMC Contributors" PARENT_SCOPE)
 set(Launcher_Copyright "${Launcher_Copyright}" PARENT_SCOPE)
+# NOTE (rebrand Lobbyz) : version ASCII pure (1re ligne du disclaimer), pour la
+# ressource Windows .rc (VALUE "LegalCopyright"). Mesure : le compilateur RC
+# corrompt le "©" des lignes amont de Launcher_Copyright quand il est injecte
+# via configure_file(@ONLY) dans lobbyz.rc.in -> "Â©" au lieu de "©" (UTF-8
+# lu comme deux caracteres Latin-1 puis elargi en UTF-16). La chaine C++
+# (BuildConfig.LAUNCHER_COPYRIGHT) reste correcte : seul ce chemin RC est
+# fautif. On isole donc ici une ligne 100% ASCII qui ne le traverse jamais.
+set(Launcher_CopyrightShort "NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.")
 set(Launcher_UserAgent "${Launcher_CommonName}/${Launcher_VERSION_NAME}" PARENT_SCOPE)
 set(Launcher_ConfigFile "${Launcher_APP_BINARY_NAME}.cfg" PARENT_SCOPE)
 set(Launcher_AppID "${Launcher_AppID}" PARENT_SCOPE)
