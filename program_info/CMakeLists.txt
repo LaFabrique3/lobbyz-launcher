@@ -8,10 +8,10 @@ if(UNIX)
     endif()
 endif()
 
-set(Launcher_CommonName "PrismLauncher")
-set(Launcher_DisplayName "Prism Launcher")
-set(Launcher_AppID "org.prismlauncher.PrismLauncher")
-set(Launcher_Domain "prismlauncher.org")
+set(Launcher_CommonName "Lobbyz")
+set(Launcher_DisplayName "Lobbyz")
+set(Launcher_AppID "fr.lobbyz.Lobbyz")
+set(Launcher_Domain "lobbyz.fr")
 set(Launcher_Git "https://github.com/PrismLauncher/PrismLauncher")
 
 set(Launcher_Name "${Launcher_CommonName}" PARENT_SCOPE)
@@ -21,7 +21,7 @@ set(Launcher_Domain "${Launcher_Domain}" PARENT_SCOPE)
 set(Launcher_Git "${Launcher_Git}" PARENT_SCOPE)
 
 set(Launcher_SVGFileName "${Launcher_AppID}.svg")
-set(Launcher_Copyright "© 2022-2026 Prism Launcher Contributors\\n© 2021-2022 PolyMC Contributors\\n© 2012-2021 MultiMC Contributors")
+set(Launcher_Copyright "NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.\\nVous (pas Mojang) etes responsable de ce que vous hebergez.\\n(c) 2026 Lobbyz - fork de Prism Launcher (GPL-3.0)\\n© 2022-2026 Prism Launcher Contributors\\n© 2021-2022 PolyMC Contributors\\n© 2012-2021 MultiMC Contributors")
 set(Launcher_Copyright_Mac "© 2022-2026 Prism Launcher Contributors, © 2021-2022 PolyMC Contributors and © 2012-2021 MultiMC Contributors" PARENT_SCOPE)
 set(Launcher_Copyright "${Launcher_Copyright}" PARENT_SCOPE)
 set(Launcher_UserAgent "${Launcher_CommonName}/${Launcher_VERSION_NAME}" PARENT_SCOPE)
@@ -39,7 +39,13 @@ set(Launcher_Branding_MAC_ICON "program_info/${Launcher_CommonName}.icon" PARENT
 set(Launcher_Branding_ICO "program_info/${Launcher_APP_BINARY_NAME}.ico")
 set(Launcher_Branding_ICO "${Launcher_Branding_ICO}" PARENT_SCOPE)
 set(Launcher_Branding_WindowsRC "program_info/${Launcher_APP_BINARY_NAME}.rc" PARENT_SCOPE)
-set(Launcher_Branding_LogoQRC "program_info/${Launcher_APP_BINARY_NAME}.qrc" PARENT_SCOPE)
+# NOTE (rebrand Lobbyz) : le nom du .qrc reste fige a "prismlauncher" (et non
+# ${Launcher_APP_BINARY_NAME}) car launcher/main.cpp appelle en dur
+# Q_INIT_RESOURCE(prismlauncher) ; ce macro genere qInitResources_prismlauncher()
+# a l'edition de liens. Renommer le .qrc casse le link (symbole introuvable).
+# main.cpp est un fichier C++ hors mandat (jamais touche) : on fixe donc ici,
+# cote CMake, le seul nom qui doit rester stable quel que soit le binaire.
+set(Launcher_Branding_LogoQRC "program_info/prismlauncher.qrc" PARENT_SCOPE)
 set(Launcher_Authors "MultiMC & Prism Launcher Contributors")
 
 set(Launcher_Portable_File "program_info/portable.txt" PARENT_SCOPE)
@@ -47,7 +53,7 @@ set(Launcher_Portable_File "program_info/portable.txt" PARENT_SCOPE)
 configure_file(${Launcher_AppID}.desktop.in ${Launcher_AppID}.desktop)
 configure_file(${Launcher_AppID}.metainfo.xml.in ${Launcher_AppID}.metainfo.xml)
 configure_file(${Launcher_APP_BINARY_NAME}.rc.in ${Launcher_APP_BINARY_NAME}.rc @ONLY)
-configure_file(${Launcher_APP_BINARY_NAME}.qrc.in ${Launcher_APP_BINARY_NAME}.qrc @ONLY)
+configure_file(prismlauncher.qrc.in prismlauncher.qrc @ONLY)
 configure_file(${Launcher_APP_BINARY_NAME}.manifest.in ${Launcher_APP_BINARY_NAME}.manifest @ONLY)
 configure_file(${Launcher_APP_BINARY_NAME}.ico ${Launcher_APP_BINARY_NAME}.ico COPYONLY)
 configure_file(${Launcher_SVGFileName} ${Launcher_SVGFileName} COPYONLY)
