@@ -26,6 +26,7 @@ compile_commands.json
 
 # Build dirs
 build
+# NB: build-lobbyz.sh/.ps1 are tracked on purpose (git add -f) despite this rule
 /build-*
 
 # Install dirs

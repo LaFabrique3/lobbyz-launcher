@@ -12,7 +12,7 @@ set(Launcher_CommonName "Lobbyz")
 set(Launcher_DisplayName "Lobbyz")
 set(Launcher_AppID "fr.lobbyz.Lobbyz")
 set(Launcher_Domain "lobbyz.fr")
-set(Launcher_Git "https://github.com/PrismLauncher/PrismLauncher")
+set(Launcher_Git "https://github.com/LaFabrique3/lobbyz-launcher")
 
 set(Launcher_Name "${Launcher_CommonName}" PARENT_SCOPE)
 set(Launcher_DisplayName "${Launcher_DisplayName}" PARENT_SCOPE)
