@@ -1,2 +1,3 @@
 *.pem -crlf
 **/testdata/** -text -diff
+/build-lobbyz.sh text eol=lf
