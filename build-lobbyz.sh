@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# S'execute DANS le shell MSYS2 CLANG64 (toolchain du preset) - garde explicite,
+# sinon l'echec cmake plus bas est cryptique (revue qualite 17.08).
+if [ "${MSYSTEM:-}" != "CLANG64" ]; then
+    echo "ERREUR: lancer depuis MSYS2 CLANG64 (ex.: C:\\msys64\\clang64.exe bash -lc ./build-lobbyz.sh)" >&2
+    exit 1
+fi
+
 # Type de build (Release par defaut). Generateur Ninja Multi-Config :
 # la config se choisit AU BUILD et A L'INSTALL par --config, jamais a la
 # configuration (methode amont : .github/workflows/build.yml ligne 131 et
 # .github/actions/package/windows/action.yml).
 BUILD_TYPE="${1:-Release}"
 
-# JDK requis (libraries/launcher est du Java compile par javac). Le PATH
-# minimal des login shells MSYS2 masque les JDK installes cote Windows :
-# on complete depuis JAVA_HOME, sinon l'installation Zulu standard.
+# JDK requis (libraries/launcher est du Java compile par javac). ATTENTION :
+# JDK 8 a 19 UNIQUEMENT - libraries/launcher/CMakeLists.txt compile en
+# -source 7, retire des JDK >= 20 ; si Zulu a ete mis a jour au-dela,
+# pointer JAVA_HOME sur un JDK <= 19 (revue qualite 17.08 ; le glob
+# ci-dessous prend la PREMIERE version par tri lexical, pas la plus recente).
+# Le PATH minimal des login shells MSYS2 masque les JDK installes cote
+# Windows : on complete depuis JAVA_HOME, sinon l'installation Zulu standard.
 if ! command -v javac > /dev/null 2>&1; then
     for jdk in "${JAVA_HOME:-}" "/c/Program Files/Zulu"/zulu-*; do
         [ -n "$jdk" ] || continue
