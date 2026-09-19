@@ -5,17 +5,20 @@ set -euo pipefail
 # Motifs : prefixe des cles CurseForge ($2a$10$, CMakeLists.txt:266) + la cle par defaut de Prism.
 # Ceinture : l'updater Prism n'est construit que si REPO et ARTIFACT sont non vides (CMakeLists.txt:353).
 verifier_sans_cle_curseforge() {
-    local dossier="$1" statut=0 f
-    if [ ! -e "$dossier/lobbyz.exe" ]; then
+    local dossier="$1" statut=0 f rc
+    if [ ! -f "$dossier/lobbyz.exe" ]; then
         echo "ERREUR: $dossier/lobbyz.exe absent" >&2
         return 1
     fi
     for f in "$dossier"/*.exe "$dossier"/*.dll; do
         [ -e "$f" ] || continue
-        if LC_ALL=C grep -a -q -F -e '$2a$10$' -e 'wuAJuNZuted3NORVmpgUC' "$f"; then
-            echo "ERREUR invariant 1 : cle CurseForge dans $f" >&2
-            statut=1
-        fi
+        rc=0
+        LC_ALL=C grep -a -q -F -e '$2a$10$' -e 'wuAJuNZuted3NORVmpgUC' "$f" || rc=$?
+        case "$rc" in
+            0) echo "ERREUR invariant 1 : cle CurseForge dans $f" >&2; statut=1 ;;
+            1) ;;
+            *) echo "ERREUR invariant 1 : $f non lu (grep rc=$rc)" >&2; statut=1 ;;
+        esac
     done
     for f in "$dossier"/*_updater*.exe; do
         [ -e "$f" ] || continue
