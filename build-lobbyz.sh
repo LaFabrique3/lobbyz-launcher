@@ -1,6 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Invariant 1 (spec launcher 13.09 par. 3.3) : aucune cle CurseForge dans un programme livre.
+# Motifs : prefixe des cles CurseForge ($2a$10$, CMakeLists.txt:266) + la cle par defaut de Prism.
+# Ceinture : l'updater Prism n'est construit que si REPO et ARTIFACT sont non vides (CMakeLists.txt:353).
+verifier_sans_cle_curseforge() {
+    local dossier="$1" statut=0 f
+    if [ ! -e "$dossier/lobbyz.exe" ]; then
+        echo "ERREUR: $dossier/lobbyz.exe absent" >&2
+        return 1
+    fi
+    for f in "$dossier"/*.exe "$dossier"/*.dll; do
+        [ -e "$f" ] || continue
+        if LC_ALL=C grep -a -q -F -e '$2a$10$' -e 'wuAJuNZuted3NORVmpgUC' "$f"; then
+            echo "ERREUR invariant 1 : cle CurseForge dans $f" >&2
+            statut=1
+        fi
+    done
+    for f in "$dossier"/*_updater*.exe; do
+        [ -e "$f" ] || continue
+        echo "ERREUR: updater Prism construit ($f)" >&2
+        statut=1
+    done
+    return "$statut"
+}
+
+# Verification seule, sans build, depuis n'importe quel bash : ./build-lobbyz.sh --verifier <dossier>
+if [ "${1:-}" = "--verifier" ]; then
+    verifier_sans_cle_curseforge "${2:?dossier a verifier}"
+    echo "invariant 1 : OK ($2)"
+    exit 0
+fi
+
 # S'execute DANS le shell MSYS2 CLANG64 (toolchain du preset) - garde explicite,
 # sinon l'echec cmake plus bas est cryptique (revue qualite 17.08).
 if [ "${MSYSTEM:-}" != "CLANG64" ]; then
@@ -36,9 +67,15 @@ if ! command -v javac > /dev/null 2>&1; then
     exit 1
 fi
 
+# Cle CurseForge et updater Prism VIDES (spec launcher 13.09 par. 3.1) ; ARTIFACT vide contre $penv{ARTIFACT_NAME} du preset.
 cmake --preset windows_mingw \
   -DLauncher_APP_BINARY_NAME=lobbyz \
   -DLauncher_MSA_CLIENT_ID=ea68b38e-e848-4a15-82b5-d4827dea89fa \
-  -DLauncher_LOGIN_CALLBACK_URL=https://lobbyz.fr/connecte
+  -DLauncher_LOGIN_CALLBACK_URL=https://lobbyz.fr/connecte \
+  -DLauncher_CURSEFORGE_API_KEY= \
+  -DLauncher_UPDATER_GITHUB_REPO= \
+  -DLauncher_BUILD_ARTIFACT=
 cmake --build --preset windows_mingw --config "$BUILD_TYPE"
 cmake --install build --config "$BUILD_TYPE"
+verifier_sans_cle_curseforge install
+echo "invariant 1 : OK (install)"
