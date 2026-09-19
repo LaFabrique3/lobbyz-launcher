@@ -18,6 +18,7 @@
 
 #include "EnsureAvailableMemory.h"
 
+#include "Application.h"
 #include "HardwareInfo.h"
 #include "ui/dialogs/CustomMessageBox.h"
 
@@ -49,7 +50,10 @@ void EnsureAvailableMemory::executeTask()
 
     bool shouldAbort = false;
 
-    if (m_instance->settings()->get("LowMemWarning").toBool()) {
+    if (APPLICATION->sansFenetre()) {
+        qWarning() << "Lobbyz sans fenetre : memoire basse, lancement poursuivi";
+    }
+    if (m_instance->settings()->get("LowMemWarning").toBool() && !APPLICATION->sansFenetre()) {
         auto* dialog = CustomMessageBox::selectable(nullptr, tr("High memory pressure"), text, QMessageBox::Icon::Warning,
                                                     QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No,
                                                     QMessageBox::StandardButton::No);
@@ -82,7 +86,10 @@ void EnsureAvailableMemory::executeTask()
     if (static_cast<double>(max) * 0.9 > static_cast<double>(available)) {
         bool shouldAbort = false;
 
-        if (m_instance->settings()->get("LowMemWarning").toBool()) {
+        if (APPLICATION->sansFenetre()) {
+            qWarning() << "Lobbyz sans fenetre : memoire basse, lancement poursuivi";
+        }
+        if (m_instance->settings()->get("LowMemWarning").toBool() && !APPLICATION->sansFenetre()) {
             auto* dialog = CustomMessageBox::selectable(
                 nullptr, tr("Low free memory"),
                 tr("There might not be enough free RAM to launch this instance with the current memory settings.\n\n"

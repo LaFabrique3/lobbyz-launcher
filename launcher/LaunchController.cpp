@@ -48,6 +48,7 @@
 #include "ui/dialogs/ProfileSetupDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 
+#include <QEventLoop>
 #include <QInputDialog>
 #include <QList>
 #include <QPushButton>
@@ -92,7 +93,7 @@ void LaunchController::decideAccount()
         m_accountToUse = accounts->at(instanceAccountIndex);
     }
 
-    if (!accounts->anyAccountIsValid()) {
+    if (!accounts->anyAccountIsValid() && !APPLICATION->sansFenetre()) {
         // Tell the user they need to log in at least one account in order to play.
         auto reply = CustomMessageBox::selectable(m_parentWidget, tr("No Accounts"),
                                                   tr("In order to play Minecraft, you must have at least one Microsoft "
@@ -110,7 +111,7 @@ void LaunchController::decideAccount()
         }
     }
 
-    if (!m_accountToUse && accounts->anyAccountIsValid()) {
+    if (!m_accountToUse && accounts->anyAccountIsValid() && !APPLICATION->sansFenetre()) {
         // If no default account is set, ask the user which one to use.
         ProfileSelectDialog selectDialog(tr("Which account would you like to use?"), ProfileSelectDialog::GlobalDefaultCheckbox,
                                          m_parentWidget);
@@ -165,17 +166,30 @@ LaunchDecision LaunchController::decideLaunchMode()
 
     if (state == AccountState::Working) {
         // refresh is in progress, we need to wait for it to finish to proceed.
-        ProgressDialog progDialog(m_parentWidget);
-        progDialog.setSkipButton(true, tr("Abort"));
-
         // TODO: this relies on tasks' synchronous signal dispatching nature
         // TODO: meaning currentTask can't complete and become null while this code is running
         // TODO: this code will produce a race condition when tasks become fully async
         auto task = accountToCheck->currentTask();
-        progDialog.execWithTask(task.get());
-
-        if (task->getState() == State::AbortedByUser) {
-            return LaunchDecision::Abort;
+        if (APPLICATION->sansFenetre()) {
+            // Lobbyz L3.10 : attendre sans « Please wait... ». refresh() cree la tache SANS la lancer (MinecraftAccount.cpp:134) :
+            // la lancer comme ProgressDialog.cpp:162-163, en file, APRES la connexion ; une fin entre les deux ne bloque pas.
+            if (task) {
+                QEventLoop attente;
+                connect(task.get(), &Task::finished, &attente, &QEventLoop::quit);
+                if (!task->isRunning() && !task->isFinished()) {
+                    QMetaObject::invokeMethod(task.get(), &Task::start, Qt::QueuedConnection);
+                }
+                if (!task->isFinished()) {
+                    attente.exec();
+                }
+            }
+        } else {
+            ProgressDialog progDialog(m_parentWidget);
+            progDialog.setSkipButton(true, tr("Abort"));
+            progDialog.execWithTask(task.get());
+            if (task->getState() == State::AbortedByUser) {
+                return LaunchDecision::Abort;
+            }
         }
 
         state = accountToCheck->accountState();
@@ -201,6 +215,10 @@ LaunchDecision LaunchController::decideLaunchMode()
             return LaunchDecision::Continue;  // All good to go
     }
 
+    if (APPLICATION->sansFenetre()) {
+        qWarning().noquote() << "Lobbyz sans fenetre : compte a reconnecter :" << reauthReason;
+        return LaunchDecision::Abort;
+    }
     if (reauthenticateAccount(accountToCheck, reauthReason)) {
         return LaunchDecision::Undecided;
     }
@@ -210,6 +228,9 @@ LaunchDecision LaunchController::decideLaunchMode()
 
 bool LaunchController::askPlayDemo() const
 {
+    if (APPLICATION->sansFenetre()) {
+        return false;
+    }
     QMessageBox box(m_parentWidget);
     box.setWindowTitle(tr("Play demo?"));
     QString text = m_accountToUse
@@ -256,6 +277,16 @@ QString LaunchController::askOfflineName(const QString& playerName, bool* ok)
             break;
     }
 
+    if (APPLICATION->sansFenetre()) {
+        // Lobbyz L3.10 : hors ligne => le jeu part hors ligne sous le pseudo du compte, sans boite
+        // (spec § 14 « jouer quand meme » ; plan L7.4 Step 5 : « Minecraft demarre »).
+        qWarning().noquote() << "Lobbyz sans fenetre :" << title << "- lancement hors ligne sous" << playerName;
+        if (ok != nullptr) {
+            *ok = true;
+        }
+        return playerName;
+    }
+
     const QString lastOfflinePlayerName = APPLICATION->settings()->get("LastOfflinePlayerName").toString();
     QString usedname = lastOfflinePlayerName.isEmpty() ? playerName : lastOfflinePlayerName;
 
@@ -284,6 +315,11 @@ void LaunchController::login()
         decision = decideLaunchMode();
     }
     if (decision == LaunchDecision::Abort) {
+        if (APPLICATION->sansFenetre()) {
+            // Lobbyz L3.10 : sans fenetre, Abort ne vient que du compte (S8) — plus de bouton « Abort » (S6).
+            emitFailed(tr("Account refresh failed"));
+            return;
+        }
         emitAborted();
         return;
     }
@@ -311,6 +347,10 @@ void LaunchController::login()
     if (m_accountToUse->accountType() != AccountType::Offline) {
         if (m_actualLaunchMode == LaunchMode::Normal && !m_accountToUse->hasProfile()) {
             // Now handle setting up a profile name here...
+            if (APPLICATION->sansFenetre()) {
+                emitFailed(tr("No Minecraft profile"));
+                return;
+            }
             if (ProfileSetupDialog dialog(m_accountToUse, m_parentWidget); dialog.exec() != QDialog::Accepted) {
                 emitAborted();
                 return;
@@ -371,7 +411,9 @@ void LaunchController::launchInstance()
     Q_ASSERT(m_session.get() != nullptr);
 
     if (!m_instance->reloadSettings()) {
-        QMessageBox::critical(m_parentWidget, tr("Error!"), tr("Couldn't load the instance profile."));
+        if (!APPLICATION->sansFenetre()) {
+            QMessageBox::critical(m_parentWidget, tr("Error!"), tr("Couldn't load the instance profile."));
+        }
         emitFailed(tr("Couldn't load the instance profile."));
         return;
     }
@@ -384,7 +426,7 @@ void LaunchController::launchInstance()
 
     const auto* console = qobject_cast<InstanceWindow*>(m_parentWidget);
     const auto showConsole = m_instance->settings()->get("ShowConsole").toBool();
-    if (!console && showConsole) {
+    if (!console && showConsole && !APPLICATION->sansFenetre()) {
         APPLICATION->showInstanceWindow(m_instance);
     }
     connect(m_launcher, &LaunchTask::readyForLaunch, this, &LaunchController::readyForLaunch);
@@ -465,7 +507,7 @@ void LaunchController::onSucceeded()
 
 void LaunchController::onFailed(QString reason)
 {
-    if (m_instance->settings()->get("ShowConsoleOnError").toBool()) {
+    if (m_instance->settings()->get("ShowConsoleOnError").toBool() && !APPLICATION->sansFenetre()) {
         APPLICATION->showInstanceWindow(m_instance, "console");
     }
     emitFailed(std::move(reason));
@@ -473,6 +515,11 @@ void LaunchController::onFailed(QString reason)
 
 void LaunchController::onProgressRequested(Task* task) const
 {
+    if (APPLICATION->sansFenetre()) {
+        // Lobbyz L3.10 : telechargements du 1er Jouer sans « Please wait... » ; la tache continue dans la boucle d'evenements.
+        m_launcher->proceed();
+        return;
+    }
     ProgressDialog progDialog(m_parentWidget);
     progDialog.setSkipButton(true, tr("Abort"));
     m_launcher->proceed();

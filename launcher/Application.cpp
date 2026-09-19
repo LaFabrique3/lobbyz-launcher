@@ -1202,6 +1202,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
 bool Application::createSetupWizard()
 {
+    if (sansFenetre()) {
+        qWarning() << "Lobbyz sans fenetre : assistant saute";
+        return false;
+    }
     bool javaRequired = [this]() {
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
             return false;
@@ -1330,6 +1334,10 @@ void Application::performMainStartupAction()
     m_status = Application::Initialized;
     if (!m_instanceIdToLaunch.isEmpty()) {
         auto inst = instances()->getInstanceById(m_instanceIdToLaunch);
+        if (!inst && sansFenetre()) {
+            echecSansFenetre("instance introuvable : " + m_instanceIdToLaunch);
+            return;
+        }
         if (inst) {
             MinecraftTarget::Ptr targetToJoin = nullptr;
             MinecraftAccountPtr accountToUse = nullptr;
@@ -1347,6 +1355,9 @@ void Application::performMainStartupAction()
             if (!m_profileToUse.isEmpty()) {
                 accountToUse = accounts()->getAccountByProfileName(m_profileToUse);
                 if (!accountToUse) {
+                    if (sansFenetre()) {
+                        echecSansFenetre("profil inconnu : " + m_profileToUse);
+                    }
                     return;
                 }
                 qDebug() << "   Launching with account" << m_profileToUse;
@@ -1401,8 +1412,20 @@ void Application::performMainStartupAction()
 void Application::showFatalErrorMessage(const QString& title, const QString& content)
 {
     m_status = Application::Failed;
+    if (sansFenetre()) {
+        qCritical().noquote() << "Lobbyz sans fenetre failed:" << title << content;
+        return;
+    }
     auto dialog = CustomMessageBox::selectable(nullptr, title, content, QMessageBox::Critical);
     dialog->exec();
+}
+
+void Application::echecSansFenetre(const QString& raison)
+{
+    // Ligne lue par classer_sortie de l'app : elle contient « failed: » => EchecLancement, jamais Annule.
+    qCritical().noquote() << "Lobbyz sans fenetre failed:" << raison;
+    m_status = Application::Failed;  // appel depuis le constructeur : main() rend 1 sans exec()
+    QMetaObject::invokeMethod(this, [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);  // boucle deja lancee : sortie 1
 }
 
 Application::~Application()
@@ -1534,7 +1557,9 @@ bool Application::launch(BaseInstance* instance,
         controller.reset(new LaunchController());
         controller->setInstance(instance);
         controller->setLaunchMode(mode);
-        controller->setProfiler(profilers().value(instance->settings()->get("Profiler").toString(), nullptr).get());
+        if (!sansFenetre()) {
+            controller->setProfiler(profilers().value(instance->settings()->get("Profiler").toString(), nullptr).get());
+        }
         controller->setTargetToJoin(targetToJoin);
         controller->setAccountToUse(accountToUse);
         controller->setOfflineName(offlineName);
@@ -1547,6 +1572,12 @@ bool Application::launch(BaseInstance* instance,
         addRunningInstance();
         QMetaObject::invokeMethod(controller.get(), &Task::start, Qt::QueuedConnection);
         return true;
+    } else if (sansFenetre() && instance->isRunning()) {
+        qWarning() << "Lobbyz sans fenetre : instance deja lancee, demande ignoree";
+        return false;
+    } else if (sansFenetre()) {
+        echecSansFenetre("instance non lancable");
+        return false;
     } else if (instance->isRunning()) {
         showInstanceWindow(instance, "console");
         return true;
@@ -1925,6 +1956,10 @@ bool Application::handleDataMigration(const QString& currentData,
 
     if (!configExists || QFileInfo::exists(nomigratePath)) {
         qDebug() << "<> No migration needed from" << name;
+        return false;
+    }
+    if (sansFenetre()) {
+        qWarning() << "Lobbyz sans fenetre : migration depuis" << name << "ignoree";
         return false;
     }
 
