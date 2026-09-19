@@ -1422,7 +1422,7 @@ void Application::showFatalErrorMessage(const QString& title, const QString& con
 
 void Application::echecSansFenetre(const QString& raison)
 {
-    // Ligne lue par classer_sortie de l'app : elle contient « failed: » => EchecLancement, jamais Annule.
+    // Ligne lue par l'app Lobbyz : elle contient "failed:" => echec de lancement, jamais une annulation.
     qCritical().noquote() << "Lobbyz sans fenetre failed:" << raison;
     m_status = Application::Failed;  // appel depuis le constructeur : main() rend 1 sans exec()
     QMetaObject::invokeMethod(this, [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);  // boucle deja lancee : sortie 1

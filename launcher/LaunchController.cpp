@@ -171,7 +171,7 @@ LaunchDecision LaunchController::decideLaunchMode()
         // TODO: this code will produce a race condition when tasks become fully async
         auto task = accountToCheck->currentTask();
         if (APPLICATION->sansFenetre()) {
-            // Lobbyz L3.10 : attendre sans « Please wait... ». refresh() cree la tache SANS la lancer (MinecraftAccount.cpp:134) :
+            // Lobbyz : attendre sans "Please wait...". refresh() cree la tache SANS la lancer (MinecraftAccount.cpp:134) :
             // la lancer comme ProgressDialog.cpp:162-163, en file, APRES la connexion ; une fin entre les deux ne bloque pas.
             if (task) {
                 QEventLoop attente;
@@ -278,8 +278,8 @@ QString LaunchController::askOfflineName(const QString& playerName, bool* ok)
     }
 
     if (APPLICATION->sansFenetre()) {
-        // Lobbyz L3.10 : hors ligne => le jeu part hors ligne sous le pseudo du compte, sans boite
-        // (spec § 14 « jouer quand meme » ; plan L7.4 Step 5 : « Minecraft demarre »).
+        // Lobbyz : hors ligne => le jeu part hors ligne sous le pseudo du compte, sans boite
+        // (decision produit : jouer quand meme, Minecraft demarre).
         qWarning().noquote() << "Lobbyz sans fenetre :" << title << "- lancement hors ligne sous" << playerName;
         if (ok != nullptr) {
             *ok = true;
@@ -316,7 +316,7 @@ void LaunchController::login()
     }
     if (decision == LaunchDecision::Abort) {
         if (APPLICATION->sansFenetre()) {
-            // Lobbyz L3.10 : sans fenetre, Abort ne vient que du compte (S8) — plus de bouton « Abort » (S6).
+            // Lobbyz : sans fenetre, Abort ne vient que du compte a reconnecter - plus de bouton "Abort" (attente sans fenetre).
             emitFailed(tr("Account refresh failed"));
             return;
         }
@@ -516,7 +516,7 @@ void LaunchController::onFailed(QString reason)
 void LaunchController::onProgressRequested(Task* task) const
 {
     if (APPLICATION->sansFenetre()) {
-        // Lobbyz L3.10 : telechargements du 1er Jouer sans « Please wait... » ; la tache continue dans la boucle d'evenements.
+        // Lobbyz : telechargements du 1er Jouer sans "Please wait..." ; la tache continue dans la boucle d'evenements.
         m_launcher->proceed();
         return;
     }

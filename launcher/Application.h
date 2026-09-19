@@ -197,7 +197,7 @@ class Application : public QApplication {
     void ShowGlobalSettings(class QWidget* parent, QString open_page = QString());
 
     bool updaterEnabled();
-    // Lobbyz L3.10 : lance par l'app (--launch sans --show-window) => aucune fenetre du moteur (decisions 15.09 et 19.09).
+    // Lobbyz : lance par l'app (--launch sans --show-window) => aucune fenetre du moteur (decision produit).
     bool sansFenetre() const { return !m_instanceIdToLaunch.isEmpty() && !m_showMainWindow; }
     void echecSansFenetre(const QString& raison);
     QString updaterBinaryName();
