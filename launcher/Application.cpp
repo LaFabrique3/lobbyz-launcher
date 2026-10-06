@@ -1206,6 +1206,9 @@ bool Application::createSetupWizard()
         qWarning() << "Lobbyz sans fenetre : assistant saute";
         return false;
     }
+    if (!m_showMainWindow) {
+        return false;  // pas de --show-window : aucun assistant
+    }
     bool javaRequired = [this]() {
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
             return false;
@@ -1370,6 +1373,11 @@ void Application::performMainStartupAction()
             }
         }
     }
+    if (!m_showMainWindow) {
+        // pas de --show-window : aucune fenetre, et rien n'a ete lance => le moteur sort
+        echecSansFenetre("rien a lancer sans --show-window");
+        return;
+    }
     if (!m_instanceIdToShowWindowOf.isEmpty()) {
         auto inst = instances()->getInstanceById(m_instanceIdToShowWindowOf);
         if (inst) {
@@ -1416,6 +1424,10 @@ void Application::showFatalErrorMessage(const QString& title, const QString& con
         qCritical().noquote() << "Lobbyz sans fenetre failed:" << title << content;
         return;
     }
+    if (!m_showMainWindow) {
+        qCritical().noquote() << "Lobbyz sans fenetre failed:" << title << content;
+        return;
+    }
     auto dialog = CustomMessageBox::selectable(nullptr, title, content, QMessageBox::Critical);
     dialog->exec();
 }
@@ -1454,11 +1466,19 @@ void Application::messageReceived(const QByteArray& message)
     }
 
     if (command == "activate") {
+        if (!m_showMainWindow) {
+            qWarning() << "Lobbyz sans fenetre : message activate ignore";
+            return;
+        }
         showMainWindow();
     } else if (command == "import") {
         QString url = received.args["url"];
         if (url.isEmpty()) {
             qWarning() << "Received" << command << "message without a zip path/URL.";
+            return;
+        }
+        if (!m_showMainWindow) {
+            qWarning() << "Lobbyz sans fenetre : message import ignore";
             return;
         }
         if (!m_mainWindow) {
@@ -1959,6 +1979,10 @@ bool Application::handleDataMigration(const QString& currentData,
         return false;
     }
     if (sansFenetre()) {
+        qWarning() << "Lobbyz sans fenetre : migration depuis" << name << "ignoree";
+        return false;
+    }
+    if (!m_showMainWindow) {
         qWarning() << "Lobbyz sans fenetre : migration depuis" << name << "ignoree";
         return false;
     }
