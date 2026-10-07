@@ -550,6 +550,9 @@ QString TranslationsModel::selectedLanguage() const
 
 void TranslationsModel::downloadIndex()
 {
+    if (!APPLICATION->m_showMainWindow) {
+        return;  // pas de --show-window : aucune requete vers le serveur de traductions
+    }
     if (d->m_indexJob || d->m_downloadJob) {
         return;
     }
